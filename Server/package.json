@@ -1,0 +1,27 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "CS242 Personal Project",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rm -r .cache/meta",
+    "search": "node index.js search",
+    "store": "node index.js store",
+    "filter": "node index.js filter",
+    "test": "jest"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.19.0",
+    "package.json": "^2.0.1",
+    "perf_hooks": "0.0.1",
+    "readline-sync": "^1.4.10",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {
+    "axios-mock-adapter": "^1.17.0",
+    "jest": "^24.9.0",
+    "jest-mock-axios": "^3.1.2"
+  }
+}
