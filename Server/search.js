@@ -5,6 +5,9 @@ const axios = require('axios');
 const conf = require('./config');
 const helper = require('./helper');                                                                              
 const repo = require('./repo');
+const credential = require('./credential').credential;
+const cs225_token = credential.cs225_token;
+const personal_token = credential.personal_token;
 const metaRepoFile = '.cache/meta';
 const metaFileFile = '.cache/metaFile';
 const metaSubmissionFile = '.cache/metaSubmission';
@@ -17,8 +20,9 @@ var dicts = {}
 /**
  * Get the number of pages to collect all response
  */
-exports.getPageRange = async function(url, token = "7876229856598e7137aed0ff5fc1bea548bb924d"){
+exports.getPageRange = async function(url, token){
     var ret = 0;
+    console.log("token:: "+ token)
     await axios.get(url,{
         proxy:false,
         headers: {"Authorization": "token "+token}
@@ -40,14 +44,17 @@ exports.getPageRange = async function(url, token = "7876229856598e7137aed0ff5fc1
  *  Fetch meta data for repos shown on one page
  */
 
-exports.getOnePage = async function(url){
+exports.getOnePage = async function(url, token){
+    console.log("token is :: ", token)
+
+    var ret = 0;
     await axios.get(url,{
         proxy:false,
-        headers: {"Authorization": "token 7876229856598e7137aed0ff5fc1bea548bb924d"}
+        headers: {"Authorization": "token "+token}
     }) 
     .then(function (response) {
         var items = response.data.items
-        console.log(response.data.items)
+        // console.log(response.data.items)
 
         for (var item of items){
             var dict =  {
@@ -59,34 +66,33 @@ exports.getOnePage = async function(url){
             }
             dicts[item.owner.login] = dict
         }
-        return 0;
     })
     .catch(function (error) {
         console.log("Got err");
-        return -1;
+        ret =  -1;
     })
-    // return dicts
+    return ret;
 }
 
 /**
  * Get all the pages respect to the query
  */
-async function getAllPages(url, lastPageIdx){
+async function getAllPages(url, lastPageIdx, token){
     var ret;
     var successIdx = 1;
     for (var i = successIdx; i <= lastPageIdx; i++){
         var pageUrl = url + i.toString()
         console.log("Fetch page "+ i.toString())
-        ret = await exports.getOnePage(pageUrl)
+        ret = await exports.getOnePage(pageUrl, token)
         console.log("ret value = " + ret.toString())
         if (ret == -1) {
             i = successIdx;
-            await new Promise(r => setTimeout(r, 100000))
+            await new Promise(r => setTimeout(r, 10000))
         }
         else {
             successIdx += 1
         };
-        await new Promise(r => setTimeout(r, 100000))
+        await new Promise(r => setTimeout(r, 500))
     }
 }
 
@@ -96,7 +102,7 @@ async function getAllPages(url, lastPageIdx){
  */
 
 
-exports.getOneFilePage = async function(url, idealFileName, exculdeFilename, acceptExtension, token = "7876229856598e7137aed0ff5fc1bea548bb924d"){
+exports.getOneFilePage = async function(url, token, idealFileName, exculdeFilename, acceptExtension){
     var ret = 0;
     
     await axios.get(url,{
@@ -152,13 +158,13 @@ exports.getOneFilePage = async function(url, idealFileName, exculdeFilename, acc
 /**
  * Get all the pages respect to the file query
  */
-async function getAllFilePages(url, lastPageIdx, idealFileName=null, exculdeFilename=null, acceptExtension=null, token = "7876229856598e7137aed0ff5fc1bea548bb924d"){
+async function getAllFilePages(url, token, lastPageIdx, idealFileName=null, exculdeFilename=null, acceptExtension=null){
     var ret;
     var successIdx = 1;
     for (var i = successIdx; i <= lastPageIdx; i++){
         var pageUrl = url + i.toString()
         console.log("Fetch page "+ i.toString())
-        ret = await exports.getOneFilePage(pageUrl, idealFileName, exculdeFilename, acceptExtension,token)
+        ret = await exports.getOneFilePage(pageUrl, token, idealFileName, exculdeFilename, acceptExtension,token)
         console.log("return = " + ret)
         if (ret == -1){
             i = successIdx -1;
@@ -178,9 +184,9 @@ async function getAllFilePages(url, lastPageIdx, idealFileName=null, exculdeFile
 exports.searchCS225ReposFromGithub = async function (){
     console.log("=== Search cs225 in repo name and description === ")
     var url = "https://api.github.com/search/repositories?q=cs225+in%3Aname,description&page=";
-    var lastPageIdx = await exports.getPageRange(url)
+    var lastPageIdx = await exports.getPageRange(url, personal_token)
     console.log("Search Query [" + url + "] has " + lastPageIdx.toString() + " pages")
-    await getAllPages(url, lastPageIdx)
+    await getAllPages(url, lastPageIdx, personal_token)
     var lastCount = Object.keys(dicts).length;
     console.log("Added "+lastCount.toString() +" new entries\n")
 
@@ -194,9 +200,9 @@ exports.searchCS225Files = async function(fileRecord){
     dicts["results"] = {};
     var url = "https://api.github.com/search/code?q="+fileRecord.keywords+"&page=";
 
-    var lastPageIdx = await exports.getPageRange(url)
+    var lastPageIdx = await exports.getPageRange(url,personal_token)
     console.log("Search Query [" + url + "] has " + lastPageIdx.toString() + " pages")
-    await getAllFilePages(url, lastPageIdx, fileRecord.idealName, fileRecord.excludeFilename, fileRecord.acceptExtension)
+    await getAllFilePages(url, personal_token, lastPageIdx, fileRecord.idealName, fileRecord.excludeFilename, fileRecord.acceptExtension)
     var lastCount = Object.keys(dicts.results).length;
     console.log("Added "+lastCount.toString() +" new entries\n")
 
@@ -209,7 +215,7 @@ exports.getCS225SubmissionFilesPageRange = async function(fileRecord){
     dicts["results"] = {};
     var url = "https://github-dev.cs.illinois.edu/api/v3/search/code?q="+fileRecord.idealName+"+in:path&page=";
 
-    var lastPageIdx = await exports.getPageRange(url, "f221a291e6a1c81f7b3e45374ea42f241074b3fe")
+    var lastPageIdx = await exports.getPageRange(url, cs225_token)
     console.log("Search Query [" + url + "] has " + lastPageIdx.toString() + " pages")
     return lastPageIdx
 }
@@ -220,7 +226,7 @@ exports.searchCS225SubmissionFiles = async function(fileRecord, lastPageIdx=34){
     dicts["results"] = {};
     var url = "https://github-dev.cs.illinois.edu/api/v3/search/code?q="+fileRecord.idealName+"+in:path&page=";
 
-    await getAllFilePages(url, lastPageIdx, null, null, null, "f221a291e6a1c81f7b3e45374ea42f241074b3fe")
+    await getAllFilePages(url, cs225_token, lastPageIdx, null, null, null)
     var lastCount = Object.keys(dicts.results).length;
     console.log("Added "+lastCount.toString() +" new entries\n")
 
@@ -235,7 +241,7 @@ exports.searchCS225SubmissionFilesAtPageidx = async function(fileRecord, pageInd
 
     var pageUrl = url + pageIndex
     console.log("Fetch page "+ pageIndex)
-    await exports.getOneFilePage(pageUrl, null,  null, null, "f221a291e6a1c81f7b3e45374ea42f241074b3fe")
+    await exports.getOneFilePage(pageUrl, cs225_token, null,  null, null)
     var lastCount = Object.keys(dicts.results).length;
     console.log("Added "+lastCount.toString() +" new entries\n")
 

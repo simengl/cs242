@@ -1,3 +1,4 @@
 Server/node_modules/*
 Server/.cache/*
+Server/credential.js
 *log*

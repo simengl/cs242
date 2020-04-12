@@ -18,30 +18,30 @@ var mode = process.argv[2];
  * npm
  */
 
-async function index(){
-    if (mode.localeCompare("search") == 0){
-
-        var record = helper.createARecord(config.config.assigns_meta.mp_traversals);
-        console.log(record)
-        // var record = {
+         // var record = {
         //     keyword:"_destroy(+insertFront(+insertBack(+split(+waterfall(+reverse(+reverseNth(+mergeWith(+mergesort(+in%3Afile+hpp+in%3Apath",
         //     excludeFilename : "List.h",
         //     acceptExtension : ".hpp",
         //     idealName: "List.hpp",
         //     assignmentId: "MP2",
         // }
-        const lastPageIdx = await search.getCS225SubmissionFilesPageRange(record)
+
+async function index(){
+    if (mode.localeCompare("search") == 0){
+
+        var record = helper.createARecord(config.config.assigns_meta.mp_traversals);
+        console.log(record)
     
         if (process.argv.length>3 && process.argv[3].localeCompare("file") == 0){
             // npm run search file
             search.searchCS225Files(record)
         }else if (process.argv.length>3 && process.argv[3].localeCompare("submission") == 0){
-            
-            
             // npm run search submission
+
+            const lastPageIdx = await search.getCS225SubmissionFilesPageRange(record)
             if(process.argv.length>4){
                 if(process.argv[4].localeCompare("mt") == 0){
-                    for(var i = 1; i <= 34; i++){
+                    for(var i = 1; i <= lastPageIdx; i++){
                         exec("npm run search submission "+i.toString(), (err, stdout, stderr) => {
                             if (err) {
                                 // node couldn't execute the command

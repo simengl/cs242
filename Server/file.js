@@ -5,10 +5,12 @@ const axios = require('axios');
 const conf = require('./config');
 const helper = require('./helper');
 const { exec } = require('child_process');
+const credential = require('./credential')
 const {
     performance,
   } = require('perf_hooks');
 const config = conf.config;
+const token = credential.credential.token;
 const cacheRoot = '.cache';
 const metaFile = '.cache/meta';
 const filteredMetaFile = '.cache/filteredMeta';
@@ -18,7 +20,7 @@ const filteredMetaFile = '.cache/filteredMeta';
 /**
  * Get dowbloadable url from file url
  */
-async function downloadFile(url, name, token="7876229856598e7137aed0ff5fc1bea548bb924d"){
+async function downloadFile(url, name, token){
     url = url.split("?")[0]
     var download_url = "";
     await axios.get(url,{
@@ -66,7 +68,7 @@ async function downloadFile(url, name, token="7876229856598e7137aed0ff5fc1bea548
  */
 async function downloadFiles(assignDir, meta){
     for(var [key, value] of Object.entries(meta)){
-        await downloadFile(value.url, assignDir+key+"_"+value.name, "f221a291e6a1c81f7b3e45374ea42f241074b3fe")
+        await downloadFile(value.url, assignDir+key+"_"+value.name, token)
     }
 }
 
