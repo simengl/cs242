@@ -5,12 +5,13 @@ const axios = require('axios');
 const conf = require('./config');
 const helper = require('./helper');
 const { exec } = require('child_process');
-const credential = require('./credential')
+const credential = require('./credential').credential;
 const {
     performance,
   } = require('perf_hooks');
 const config = conf.config;
-const token = credential.credential.token;
+const cs225_token = credential.cs225_token;
+const personal_token = credential.personal_token;
 const cacheRoot = '.cache';
 const metaFile = '.cache/meta';
 const filteredMetaFile = '.cache/filteredMeta';
@@ -23,6 +24,7 @@ const filteredMetaFile = '.cache/filteredMeta';
 async function downloadFile(url, name, token){
     url = url.split("?")[0]
     var download_url = "";
+    console.log("token: ", token)
     await axios.get(url,{
         proxy:false,
         headers:{
@@ -68,7 +70,13 @@ async function downloadFile(url, name, token){
  */
 async function downloadFiles(assignDir, meta){
     for(var [key, value] of Object.entries(meta)){
-        await downloadFile(value.url, assignDir+key+"_"+value.name, token)
+        var semester = meta.semester;
+        if (typeof semester == "undefined"){
+            await downloadFile(value.url, assignDir+key+"_"+value.name, cs225_token);
+        }else{
+            await downloadFile(value.url, assignDir+key+"_"+value.name, personal_token);
+        }
+        
     }
 }
 

@@ -12,6 +12,7 @@ const metaRepoFile = '.cache/meta';
 const metaFileFile = '.cache/metaFile';
 const metaSubmissionFile = '.cache/metaSubmission';
 const inputFile = '.cache/metaSample';
+var retryAfter = 0;
 var exports = module.exports = {};
 
 
@@ -28,11 +29,12 @@ exports.getPageRange = async function(url, token){
         headers: {"Authorization": "token "+token}
     })
     .then(function (response) {
+        // console.log(response)
         var lastPageIdx = response.headers.link.split("<")[2].split(">")[0].split("=");
         ret = parseInt(lastPageIdx[lastPageIdx.length - 1])
     })
     .catch(function (error) {
-        console.log(error);
+        console.log("Got error");
     })
     .finally(function () {
         // always executed
@@ -110,15 +112,20 @@ exports.getOneFilePage = async function(url, token, idealFileName, exculdeFilena
         headers: {"Authorization": "token "+token}
     }) 
     .then(function (response) {
+        console.log("==== response ====")
+        // resetTime = response.headers['x-ratelimit-reset']
+        // console.log(resetTime, new Date().getTime())
+        // console.log(response.headers)
         var items = response.data.items
         if(exculdeFilename){
             for (var item of items){
+                console.log(item.repository.full_name)
                 if (exculdeFilename.localeCompare(item.name) == 0 || !item.name.includes(acceptExtension)){
-                    console.log("=== filtered "+ item.name+" ===")
+                    // console.log("=== filtered "+ item.name+" ===")
                     continue
                 }
                 else if (idealFileName.localeCompare(item.name) == 0){
-                    console.log("=== exact "+item.name+" ===")
+                    // console.log("=== exact "+item.name+" ===")
                     var dict =  {
                         "updated_at": item.repository.updated_at,
                         "name" : item.name, 
@@ -128,12 +135,14 @@ exports.getOneFilePage = async function(url, token, idealFileName, exculdeFilena
                     }
                     dicts.results[item.repository.owner.login] = dict
                 }else{
-                    console.log("=== pass "+ item.name+" ===")
+                    // console.log("=== pass "+ item.name+" ===")
                 }
             }
         }else{
             for (var item of items){
-                if (item.repository.owner.login.localeCompare("cs225-fa18") == 0){
+                console.log(item.repository.full_name)
+                // console.log(item)
+                // if (item.repository.owner.login.localeCompare("cs225-sp20") == 0){
                     var dict =  {
                         "name" : item.name, 
                         "semester" : item.repository.owner.login,
@@ -142,13 +151,18 @@ exports.getOneFilePage = async function(url, token, idealFileName, exculdeFilena
                         "html_url":item.html_url,
                     }
                     dicts.results[item.repository.name] = dict
-                }
+                // }
             }
             
         }
     })
     .catch(function (error) {
-        console.log("Got err");
+        console.log("Got err: ", error);
+        console.log(error.response.headers);
+        retryAfter = error.response.headers['retry-after'];
+        if (typeof retryAfter == "undefined"){
+            retryAfter = error.response.headers['x-ratelimit-reset'] - (new Date().getTime()/1000)+1
+        }
         ret =  -1;
     })
 
@@ -168,12 +182,14 @@ async function getAllFilePages(url, token, lastPageIdx, idealFileName=null, excu
         console.log("return = " + ret)
         if (ret == -1){
             i = successIdx -1;
-            await new Promise(r => setTimeout(r, 10000))
+            console.log("Retry After : ", retryAfter);
+            await new Promise(r => setTimeout(r, retryAfter*1000))
+            resetTime += 1;
         }
         else {
             successIdx += 1
         };
-        await new Promise(r => setTimeout(r, 500))
+        // await new Promise(r => setTimeout(r, 1000))
     }
 }
 
@@ -213,8 +229,8 @@ exports.getCS225SubmissionFilesPageRange = async function(fileRecord){
     console.log("=== Get "+fileRecord.idealName+" in CS225  submissions page range=== ")
     dicts["record"] = fileRecord;
     dicts["results"] = {};
-    var url = "https://github-dev.cs.illinois.edu/api/v3/search/code?q="+fileRecord.idealName+"+in:path&page=";
-
+    // var url = "https://github-dev.cs.illinois.edu/api/v3/search/repositories?q=cs225-sp20+in:name&per_page=100&page=";
+    var url = "https://github-dev.cs.illinois.edu/api/v3/search/code?q=filename:"+fileRecord.idealName+"+org:"+fileRecord.semester+"&per_page=100&page=";
     var lastPageIdx = await exports.getPageRange(url, cs225_token)
     console.log("Search Query [" + url + "] has " + lastPageIdx.toString() + " pages")
     return lastPageIdx
@@ -224,8 +240,8 @@ exports.searchCS225SubmissionFiles = async function(fileRecord, lastPageIdx=34){
     console.log("=== Get "+fileRecord.idealName+" in CS225  submissions === ")
     dicts["record"] = fileRecord;
     dicts["results"] = {};
-    var url = "https://github-dev.cs.illinois.edu/api/v3/search/code?q="+fileRecord.idealName+"+in:path&page=";
-
+    // var url = "https://github-dev.cs.illinois.edu/api/v3/search/repositories?q=cs225-sp20+in:name&per_page=100&page=";
+    var url = "https://github-dev.cs.illinois.edu/api/v3/search/code?q=filename:"+fileRecord.idealName+"+org:"+fileRecord.semester+"&per_page=100&page=";
     await getAllFilePages(url, cs225_token, lastPageIdx, null, null, null)
     var lastCount = Object.keys(dicts.results).length;
     console.log("Added "+lastCount.toString() +" new entries\n")
@@ -237,7 +253,8 @@ exports.searchCS225SubmissionFilesAtPageidx = async function(fileRecord, pageInd
     console.log("=== Get "+fileRecord.idealName+" in CS225  submissions === ")
     dicts["record"] = fileRecord;
     dicts["results"] = {};
-    var url = "https://github-dev.cs.illinois.edu/api/v3/search/code?q="+fileRecord.idealName+"+in:path&page=";
+    // var url = "https://github-dev.cs.illinois.edu/api/v3/search/repositories?q=cs225-sp20+in:name&per_page=100&page=";
+    var url = "https://github-dev.cs.illinois.edu/api/v3/search/code?q=filename:"+fileRecord.idealName+"+org:"+fileRecord.semester+"&per_page=100&page=";
 
     var pageUrl = url + pageIndex
     console.log("Fetch page "+ pageIndex)

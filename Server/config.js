@@ -17,7 +17,8 @@ module.exports.config = {
             excludeFilename : "ImageTraversal.h",
             acceptExtension : ".cpp",
             idealName:"ImageTraversal.cpp",
-            assignmentId:"mp_traversals"
+            assignmentId:"mp_traversals",
+            semester:"cs225-sp20"
         }
     }
 }
@@ -30,3 +31,4 @@ module.exports.config = {
 //     idealName: "List.hpp",
 //     assignmentId: "MP2",
 // }
+
